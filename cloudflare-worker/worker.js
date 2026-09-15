@@ -11,6 +11,25 @@ function corsHeaders(origin) {
   };
 }
 
+// Google Form: 美淑琳設計顧問｜網站詢問單
+// https://docs.google.com/forms/d/e/1FAIpQLSft_f5_FPSQ4rqXNczq9zfaLX485DCvmEHsAI-66zhuiFdR8g/viewform
+const GOOGLE_FORM_ID = '1FAIpQLSft_f5_FPSQ4rqXNczq9zfaLX485DCvmEHsAI-66zhuiFdR8g';
+const GOOGLE_FORM_ENTRIES = {
+  name: 'entry.252609749',
+  phone: 'entry.1425905080',
+  email: 'entry.976305721',
+  lineId: 'entry.588924791',
+  contactTime: 'entry.1600019176',
+  needs: 'entry.635533849',
+  spaceType: 'entry.1261683112',
+  layoutChange: 'entry.1687566601',
+  address: 'entry.1533653433',
+  budget: 'entry.570816994',
+  size: 'entry.1225021293',
+  style: 'entry.971747479',
+  message: 'entry.1806837787',
+};
+
 const FIELD_LABELS = [
   ['name', '姓名'],
   ['phone', '聯絡電話'],
@@ -130,7 +149,24 @@ export default {
       results.email = 'skipped:not_configured';
     }
 
-    const anySent = results.line === 'sent' || results.email === 'sent';
+    const formBody = new URLSearchParams();
+    for (const [key, entry] of Object.entries(GOOGLE_FORM_ENTRIES)) {
+      const v = data[key];
+      if (!v) continue;
+      if (Array.isArray(v)) {
+        for (const item of v) formBody.append(entry, item);
+      } else {
+        formBody.append(entry, v);
+      }
+    }
+    const sheetRes = await fetch(`https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/formResponse`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formBody,
+    });
+    results.googleForm = sheetRes.ok ? 'sent' : `failed:${sheetRes.status}`;
+
+    const anySent = results.line === 'sent' || results.email === 'sent' || results.googleForm === 'sent';
     return new Response(JSON.stringify({ ok: anySent, results }), {
       status: anySent ? 200 : 502,
       headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
