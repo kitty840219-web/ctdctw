@@ -22,8 +22,8 @@ if(form){
    const res=await fetch(CONTACT_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
    const json=await res.json();
    if(json.ok){status.textContent='已送出，我們會盡快與您聯繫！';status.className='form-status ok';form.reset();if(q&&expected){const na=Math.floor(Math.random()*8)+2,nb=Math.floor(Math.random()*8)+2;q.textContent=`驗證碼：${na} + ${nb} = ?`;expected.value=String(na+nb)}}
-   else{status.textContent='送出失敗，請改用電話或 Email 與我們聯繫。';status.className='form-status error'}
-  }catch(err){status.textContent='送出失敗，請改用電話或 Email 與我們聯繫。';status.className='form-status error'}
+   else{status.textContent='⚠ 送出失敗，麻煩改用電話 (02) 2500-7668 或 Email ctdc@ctdcdesign.com 與我們聯繫，謝謝。';status.className='form-status error'}
+  }catch(err){status.textContent='⚠ 送出失敗，麻煩改用電話 (02) 2500-7668 或 Email ctdc@ctdcdesign.com 與我們聯繫，謝謝。';status.className='form-status error'}
   btn.disabled=false;
  });
 }
