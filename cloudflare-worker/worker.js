@@ -69,33 +69,57 @@ export default {
       });
     }
 
-    const lines = ['\n【美淑琳設計顧問｜網站詢問單】'];
+    const rows = [];
     for (const [key, label] of FIELD_LABELS) {
       const v = data[key];
       if (!v) continue;
       const text = Array.isArray(v) ? v.join('、') : v;
-      if (String(text).trim()) lines.push(`${label}：${text}`);
+      if (String(text).trim()) rows.push([label, text]);
     }
-    const message = lines.join('\n');
+    const lineMessage = ['\n【美淑琳設計顧問｜網站詢問單】', ...rows.map(([l, t]) => `${l}：${t}`)].join('\n');
+    const emailHtml = `<h2>美淑琳設計顧問｜網站詢問單</h2><table cellpadding="6" style="border-collapse:collapse">${rows.map(([l, t]) => `<tr><td style="color:#777;white-space:nowrap;vertical-align:top">${l}</td><td>${String(t).replace(/</g, '&lt;')}</td></tr>`).join('')}</table>`;
 
-    const lineRes = await fetch('https://notify-api.line.me/api/notify', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.LINE_NOTIFY_TOKEN}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({ message }),
-    });
+    const results = {};
 
-    if (!lineRes.ok) {
-      const errText = await lineRes.text();
-      return new Response(JSON.stringify({ ok: false, error: 'line_notify_failed', detail: errText }), {
-        status: 502,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
+    if (env.LINE_CHANNEL_TOKEN) {
+      // Broadcasts to everyone who has added the Official Account as a friend.
+      // LINE Notify was retired 2025-03-31; this uses the Messaging API instead.
+      const lineRes = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.LINE_CHANNEL_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messages: [{ type: 'text', text: lineMessage }] }),
       });
+      results.line = lineRes.ok ? 'sent' : `failed:${await lineRes.text()}`;
+    } else {
+      results.line = 'skipped:no_token';
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    if (env.RESEND_API_KEY && env.NOTIFY_EMAIL) {
+      const emailRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'CTDC 網站表單 <onboarding@resend.dev>',
+          to: [env.NOTIFY_EMAIL],
+          reply_to: data.email,
+          subject: `網站詢問單：${data.name}`,
+          html: emailHtml,
+        }),
+      });
+      results.email = emailRes.ok ? 'sent' : `failed:${await emailRes.text()}`;
+    } else {
+      results.email = 'skipped:not_configured';
+    }
+
+    const anySent = results.line === 'sent' || results.email === 'sent';
+    return new Response(JSON.stringify({ ok: anySent, results }), {
+      status: anySent ? 200 : 502,
       headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
     });
   },
