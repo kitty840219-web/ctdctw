@@ -3,6 +3,7 @@ from pathlib import Path
 import json,hashlib,shutil,html
 from PIL import Image
 import opencc
+SITE_UPDATING=True
 ROOT=Path(__file__).resolve().parent
 SOURCE=ROOT.parent/'CTDC官網素材'
 if not SOURCE.exists():SOURCE=ROOT/'archive'
@@ -44,9 +45,11 @@ for item in DATA:
 cases.sort(key=lambda x:({'Residence':0,'Commercial':1,'Office':2,'Private':3}[x['category']],-int(x['id'])))
 cats={'Residence':'住宅空間','Commercial':'商業空間','Office':'辦公空間','Private':'私人會所'}
 navs=[('index.html','首頁'),('about.html','關於我們'),('services.html','服務項目'),('works.html','案例分享'),('contact.html','聯絡我們')]
+UPDATE_MSG='網站內容更新中，部分資訊將持續調整，造成不便敬請見諒'
+UPDATE_BANNER=('<div class="update-banner" role="status"><div class="update-banner-track">'+(f'<span>{UPDATE_MSG}</span>'*8)+'</div></div>') if SITE_UPDATING else ''
 def page(name,title,body,prefix=''):
  nav=''.join(f'<a href="{prefix}{url}"'+(' aria-current="page"' if url==name else '')+f'>{label}</a>' for url,label in navs[1:])
- txt=f'''<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}｜美淑琳設計顧問有限公司</title><meta name="description" content="美淑琳設計顧問有限公司，CTDC 臺灣。整合設計、工程與專案管理，讓空間的每一個細節，回應生活。"><meta name="theme-color" content="#f4f3ef"><link rel="stylesheet" href="{prefix}style.css"><link rel="icon" href="{prefix}favicon.svg" type="image/svg+xml"><script src="{prefix}site.js" defer></script></head><body id="top"><a class="skip" href="#main">跳至主要內容</a><header><a class="brand" href="{prefix}index.html" aria-label="CTDC 臺灣首頁"><div><img class="logo-mark" src="{prefix}assets/{BRAND_LOGO}" alt="CTDC"></div><div class="brand-name">美淑琳<br>設計顧問有限公司</div></a><button class="menu" aria-controls="nav" aria-expanded="false">選單 ☰</button><nav id="nav" aria-label="主要導覽">{nav}</nav></header><main id="main">{body}</main><footer><div class="footer-top"><div><a class="brand" href="{prefix}index.html"><div><img class="logo-mark" src="{prefix}assets/{BRAND_LOGO}" alt="CTDC"></div></a><p class="footer-info" style="margin-top:22px">美淑琳設計顧問有限公司<br>統一編號 60677831</p></div><div class="footer-nav">{nav}</div></div><div class="footer-bottom"><span>© 2026 CTDC Taiwan. All rights reserved.</span><span>空間有形，生活無限。</span></div></footer><a class="backtop" href="#top" aria-label="回到頁首">↑</a></body></html>'''
+ txt=f'''<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}｜美淑琳設計顧問有限公司</title><meta name="description" content="美淑琳設計顧問有限公司，CTDC 臺灣。整合設計、工程與專案管理，讓空間的每一個細節，回應生活。"><meta name="theme-color" content="#f4f3ef"><link rel="stylesheet" href="{prefix}style.css"><link rel="icon" href="{prefix}favicon.svg" type="image/svg+xml"><script src="{prefix}site.js" defer></script></head><body id="top"><a class="skip" href="#main">跳至主要內容</a>{UPDATE_BANNER}<header><a class="brand" href="{prefix}index.html" aria-label="CTDC 臺灣首頁"><div><img class="logo-mark" src="{prefix}assets/{BRAND_LOGO}" alt="CTDC"></div><div class="brand-name">美淑琳<br>設計顧問有限公司</div></a><button class="menu" aria-controls="nav" aria-expanded="false">選單 ☰</button><nav id="nav" aria-label="主要導覽">{nav}</nav></header><main id="main">{body}</main><footer><div class="footer-top"><div><a class="brand" href="{prefix}index.html"><div><img class="logo-mark" src="{prefix}assets/{BRAND_LOGO}" alt="CTDC"></div></a><p class="footer-info" style="margin-top:22px">美淑琳設計顧問有限公司<br>統一編號 60677831</p></div><div class="footer-nav">{nav}</div></div><div class="footer-bottom"><span>© 2026 CTDC Taiwan. All rights reserved.</span><span>空間有形，生活無限。</span></div></footer><a class="backtop" href="#top" aria-label="回到頁首">↑</a></body></html>'''
  (DIST/name).parent.mkdir(parents=True,exist_ok=True);(DIST/name).write_text(txt,encoding='utf-8')
 def photo(file,alt,cls='',eager=False,prefix=''):
  return f'<img class="{cls}" src="{prefix}assets/{file}" alt="{alt}" loading="'+('eager' if eager else 'lazy')+'" decoding="async">'
