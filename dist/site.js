@@ -1,3 +1,34 @@
+const BGM_VIDEO_ID='kQF5G4HGEFk',BGM_VOLUME=2;
+const bgmToggle=document.getElementById('bgm-toggle');
+if(bgmToggle&&document.getElementById('bgm-mount')){
+ let bgmPlayer=null,bgmReady=false;
+ const tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';
+ document.head.appendChild(tag);
+ window.onYouTubeIframeAPIReady=function(){
+  bgmPlayer=new YT.Player('bgm-mount',{
+   videoId:BGM_VIDEO_ID,
+   playerVars:{autoplay:1,loop:1,playlist:BGM_VIDEO_ID,controls:0,disablekb:1,fs:0,modestbranding:1,playsinline:1},
+   events:{onReady:e=>{
+    bgmReady=true;e.target.setVolume(BGM_VOLUME);e.target.unMute();e.target.playVideo();
+    // Browsers may silently block unmuted autoplay; reflect whatever actually happened.
+    setTimeout(syncToggleIcon,600);
+   },onStateChange:()=>setTimeout(syncToggleIcon,300)}
+  });
+ };
+ function syncToggleIcon(){
+  if(!bgmPlayer||!bgmPlayer.isMuted)return;
+  const on=!bgmPlayer.isMuted();
+  bgmToggle.textContent=on?'🔊':'🔇';
+  bgmToggle.setAttribute('aria-pressed',String(on));
+ }
+ bgmToggle.addEventListener('click',()=>{
+  if(!bgmReady)return;
+  if(bgmPlayer.isMuted()){bgmPlayer.unMute();bgmPlayer.setVolume(BGM_VOLUME);bgmPlayer.playVideo()}
+  else{bgmPlayer.mute()}
+  syncToggleIcon();
+ });
+}
+
 const menu=document.querySelector('.menu'),nav=document.querySelector('nav');
 menu?.addEventListener('click',()=>{const opened=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(opened));menu.textContent=opened?'關閉 ✕':'選單 ☰'});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&nav?.classList.contains('open')){nav.classList.remove('open');menu.setAttribute('aria-expanded','false');menu.textContent='選單 ☰';menu.focus()}});
