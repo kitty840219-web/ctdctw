@@ -29,6 +29,18 @@ const FIELD_LABELS = [
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+
+    // LINE webhook: log the sender's userId so we know who to push() to.
+    // Visit this in "wrangler tail" while the target person messages the bot.
+    if (url.pathname === '/line-webhook') {
+      const body = await request.json().catch(() => ({}));
+      for (const ev of body.events || []) {
+        console.log('LINE webhook event', JSON.stringify({ type: ev.type, userId: ev.source?.userId }));
+      }
+      return new Response('ok');
+    }
+
     const origin = request.headers.get('Origin') || '';
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders(origin) });
@@ -81,20 +93,21 @@ export default {
 
     const results = {};
 
-    if (env.LINE_CHANNEL_TOKEN) {
-      // Broadcasts to everyone who has added the Official Account as a friend.
-      // LINE Notify was retired 2025-03-31; this uses the Messaging API instead.
-      const lineRes = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+    if (env.LINE_CHANNEL_TOKEN && env.LINE_TARGET_USER_ID) {
+      // Pushes privately to one specific person (the business owner), not a
+      // broadcast — this Official Account may have unrelated existing friends
+      // who must never see customer inquiry data.
+      const lineRes = await fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${env.LINE_CHANNEL_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ messages: [{ type: 'text', text: lineMessage }] }),
+        body: JSON.stringify({ to: env.LINE_TARGET_USER_ID, messages: [{ type: 'text', text: lineMessage }] }),
       });
       results.line = lineRes.ok ? 'sent' : `failed:${await lineRes.text()}`;
     } else {
-      results.line = 'skipped:no_token';
+      results.line = 'skipped:not_configured';
     }
 
     if (env.RESEND_API_KEY && env.NOTIFY_EMAIL) {
