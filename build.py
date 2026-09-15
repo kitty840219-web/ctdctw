@@ -1,14 +1,18 @@
+# -*- coding: utf-8 -*-
 from pathlib import Path
 import json,hashlib,shutil,html
 from PIL import Image
+import opencc
 ROOT=Path(__file__).resolve().parent
 SOURCE=ROOT.parent/'CTDC官網素材'
 if not SOURCE.exists():SOURCE=ROOT/'archive'
 DATA=json.loads((ROOT/'content/cases.json').read_text())
 DIST=ROOT/'dist';ASSETS=DIST/'assets';ASSETS.mkdir(exist_ok=True)
+_s2tw=opencc.OpenCC('s2tw')
 def trad(s):
- for a,b in [('空间','空間'),('办公室','辦公室'),('设计','設計'),('软装','軟裝'),('执行','執行'),('施工','施工'),('商业','商業'),('建筑面积','建築面積'),('地点','地點'),('类型','類型'),('责任','負責範圍'),('庄园','莊園'),('别墅','別墅'),('项目','專案'),('栖','棲'),('隐','隱'),('织','織'),('馆','館'),('开展','開展'),('卷轴','卷軸'),('九间堂','九間堂'),('梦想','夢想'),('温斯顿','溫斯頓'),('岛','島'),('华贸','華貿'),('广场','廣場'),('恒隆','恆隆'),('新天地','新天地'),('华','華'),('厦','廈'),('万象','萬象'),('创禾','創禾'),('新西兰','紐西蘭'),('旗舰','旗艦'),('铺','舖'),('宁波','寧波'),('杭州市','杭州市'),('苏州','蘇州'),('宁','寧'),('装饰','裝飾'),('会所','會所'),('办公','辦公'),('装修','裝修'),('总','總'),('陈','陳'),('厅','廳'),('门','門'),('工程管理','工程管理')]:s=s.replace(a,b)
- return html.escape(s)
+ return html.escape(_s2tw.convert(s))
+BRAND_LOGO='brand-ctdc.png'
+shutil.copy(ROOT/'content/brand/ctdc-mark.png',ASSETS/BRAND_LOGO)
 def optimize(url):
  ext=Path(url.split('?')[0]).suffix;name=hashlib.sha256(url.encode()).hexdigest()[:12];src=SOURCE/'圖片'/(name+ext)
  if not src.exists():return None
@@ -30,7 +34,7 @@ cats={'Residence':'住宅空間','Commercial':'商業空間','Office':'辦公空
 navs=[('index.html','首頁'),('about.html','關於我們'),('services.html','服務項目'),('works.html','案例分享'),('contact.html','聯絡我們')]
 def page(name,title,body,prefix=''):
  nav=''.join(f'<a href="{prefix}{url}"'+(' aria-current="page"' if url==name else '')+f'>{label}</a>' for url,label in navs[1:])
- txt=f'''<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}｜CTDC 臺灣・美淑琳設計顧問</title><meta name="description" content="美淑琳設計顧問有限公司，CTDC 臺灣。整合設計、工程與專案管理，讓空間的每一個細節，回應生活。"><meta name="theme-color" content="#f4f3ef"><link rel="stylesheet" href="{prefix}style.css"><link rel="icon" href="{prefix}favicon.svg" type="image/svg+xml"><script src="{prefix}site.js" defer></script></head><body id="top"><a class="skip" href="#main">跳至主要內容</a><header><a class="brand" href="{prefix}index.html" aria-label="CTDC 臺灣首頁"><div><div class="wordmark">CTDC</div><small>DESIGN · TAIWAN</small></div><div class="brand-name">美淑琳<br>設計顧問有限公司</div></a><button class="menu" aria-controls="nav" aria-expanded="false">選單 ☰</button><nav id="nav" aria-label="主要導覽">{nav}</nav></header><main id="main">{body}</main><footer><div class="footer-top"><div><a class="brand" href="{prefix}index.html"><div><div class="wordmark">CTDC</div><small>DESIGN · TAIWAN</small></div></a><p class="footer-info" style="margin-top:22px">美淑琳設計顧問有限公司<br>統一編號 60677831</p></div><div class="footer-nav">{nav}</div></div><div class="footer-bottom"><span>© 2026 CTDC Taiwan. All rights reserved.</span><span>空間有形，生活無限。</span></div></footer><a class="backtop" href="#top" aria-label="回到頁首">↑</a></body></html>'''
+ txt=f'''<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}｜CTDC 臺灣・美淑琳設計顧問</title><meta name="description" content="美淑琳設計顧問有限公司，CTDC 臺灣。整合設計、工程與專案管理，讓空間的每一個細節，回應生活。"><meta name="theme-color" content="#f4f3ef"><link rel="stylesheet" href="{prefix}style.css"><link rel="icon" href="{prefix}favicon.svg" type="image/svg+xml"><script src="{prefix}site.js" defer></script></head><body id="top"><a class="skip" href="#main">跳至主要內容</a><header><a class="brand" href="{prefix}index.html" aria-label="CTDC 臺灣首頁"><div><img class="logo-mark" src="{prefix}assets/{BRAND_LOGO}" alt="CTDC"><small>DESIGN · TAIWAN</small></div><div class="brand-name">美淑琳<br>設計顧問有限公司</div></a><button class="menu" aria-controls="nav" aria-expanded="false">選單 ☰</button><nav id="nav" aria-label="主要導覽">{nav}</nav></header><main id="main">{body}</main><footer><div class="footer-top"><div><a class="brand" href="{prefix}index.html"><div><img class="logo-mark" src="{prefix}assets/{BRAND_LOGO}" alt="CTDC"><small>DESIGN · TAIWAN</small></div></a><p class="footer-info" style="margin-top:22px">美淑琳設計顧問有限公司<br>統一編號 60677831</p></div><div class="footer-nav">{nav}</div></div><div class="footer-bottom"><span>© 2026 CTDC Taiwan. All rights reserved.</span><span>空間有形，生活無限。</span></div></footer><a class="backtop" href="#top" aria-label="回到頁首">↑</a></body></html>'''
  (DIST/name).parent.mkdir(parents=True,exist_ok=True);(DIST/name).write_text(txt,encoding='utf-8')
 def photo(file,alt,cls='',eager=False,prefix=''):
  return f'<img class="{cls}" src="{prefix}assets/{file}" alt="{alt}" loading="'+('eager' if eager else 'lazy')+'" decoding="async">'
