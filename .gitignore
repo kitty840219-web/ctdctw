@@ -1,0 +1,6 @@
+.DS_Store
+.sites-runtime/
+__pycache__/
+.env
+.env.*
+!.env.example
