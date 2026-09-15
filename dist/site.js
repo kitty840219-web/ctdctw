@@ -27,9 +27,3 @@ if(form){
   btn.disabled=false;
  });
 }
-
-const gate=document.querySelector('.entry-gate');
-if(gate){
- const obs=new IntersectionObserver(([entry])=>{document.body.classList.toggle('past-gate',!entry.isIntersecting)},{threshold:0});
- obs.observe(gate);
-}
