@@ -21,6 +21,11 @@ GATE_LOGO='gate-logo-'+hashlib.sha256(_gate_logo_bytes).hexdigest()[:10]+'.png'
 for old in ASSETS.glob('gate-logo-*.png'):
  if old.name!=GATE_LOGO:old.unlink()
 (ASSETS/GATE_LOGO).write_bytes(_gate_logo_bytes)
+_favicon_bytes=(ROOT/'content/brand/favicon-source.png').read_bytes()
+FAVICON='favicon-'+hashlib.sha256(_favicon_bytes).hexdigest()[:10]+'.png'
+for old in DIST.glob('favicon*.png'):
+ if old.name!=FAVICON:old.unlink()
+(DIST/FAVICON).write_bytes(_favicon_bytes)
 FEATURE_DIR=ROOT/'content/brand/feature'
 def feature_photo(name):
  for old in ASSETS.glob(f'feature-{name}-*.webp'):old.unlink()
@@ -53,7 +58,7 @@ def page(name,title,body,prefix='',chrome=True):
  nav=''.join(f'<a href="{prefix}{url}"'+(' aria-current="page"' if url==name else '')+f'>{label}</a>' for url,label in navs)
  bgm_btn='<button id="bgm-toggle" class="bgm-toggle" aria-label="播放背景音樂" aria-pressed="false">🔇</button>'
  chrome_html=f'''<a class="skip" href="#main">跳至主要內容</a><header><a class="brand" href="{prefix}welcome.html" aria-label="CTDC 臺灣"><div><img class="logo-mark" src="{prefix}assets/{BRAND_LOGO}" alt="CTDC"></div><div class="brand-name">美淑琳<br>設計顧問有限公司</div></a><button class="menu" aria-controls="nav" aria-expanded="false">選單 ☰</button><nav id="nav" aria-label="主要導覽">{nav}{bgm_btn}</nav></header><main id="main">{body}</main><footer><div class="footer-top"><div><a class="brand" href="{prefix}welcome.html"><div><img class="logo-mark" src="{prefix}assets/{BRAND_LOGO}" alt="CTDC"></div></a><p class="footer-info" style="margin-top:22px">美淑琳設計顧問有限公司<br>統一編號 60677831</p></div><div class="footer-nav">{nav}</div></div><div class="footer-bottom"><span>© 2026 CTDC Taiwan. All rights reserved.</span><span>空間有形，生活無限。</span></div></footer><a class="backtop" href="#top" aria-label="回到頁首">↑</a>''' if chrome else f'<main id="main">{body}</main>'+bgm_btn.replace('class="bgm-toggle"','class="bgm-toggle bgm-toggle-floating"')
- txt=f'''<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}｜美淑琳設計顧問有限公司</title><meta name="description" content="美淑琳設計顧問有限公司，CTDC 臺灣。整合設計、工程與專案管理，讓空間的每一個細節，回應生活。"><meta name="theme-color" content="#f4f3ef"><link rel="stylesheet" href="{prefix}style.css"><link rel="icon" href="{prefix}favicon.svg" type="image/svg+xml"><script src="{prefix}site.js" defer></script></head><body id="top"><div id="bgm-mount" style="position:absolute;width:1px;height:1px;overflow:hidden"></div>{chrome_html}</body></html>'''
+ txt=f'''<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}｜美淑琳設計顧問有限公司</title><meta name="description" content="美淑琳設計顧問有限公司，CTDC 臺灣。整合設計、工程與專案管理，讓空間的每一個細節，回應生活。"><meta name="theme-color" content="#f4f3ef"><link rel="stylesheet" href="{prefix}style.css"><link rel="icon" href="{prefix}{FAVICON}" type="image/png"><script src="{prefix}site.js" defer></script></head><body id="top"><div id="bgm-mount" style="position:absolute;width:1px;height:1px;overflow:hidden"></div>{chrome_html}</body></html>'''
  (DIST/name).parent.mkdir(parents=True,exist_ok=True);(DIST/name).write_text(txt,encoding='utf-8')
 def photo(file,alt,cls='',eager=False,prefix=''):
  return f'<img class="{cls}" src="{prefix}assets/{file}" alt="{alt}" loading="'+('eager' if eager else 'lazy')+'" decoding="async">'
@@ -110,6 +115,5 @@ for c in cases:
  viewer=f'''<div class="gallery-viewer"><div class="gallery-main-frame"><img class="gallery-main" src="../assets/{c['photos'][0]}" alt="{c['title']}・空間照片" loading="eager" decoding="async"></div><div class="gallery-thumbs-row"><button type="button" class="thumb-nav prev" aria-label="上一批縮圖">‹</button><div class="gallery-thumbs">{thumbs}</div><button type="button" class="thumb-nav next" aria-label="下一批縮圖">›</button></div></div>'''
  body=f'''<div class="wrap"><div class="breadcrumb"><a href="../works.html">案例分享</a> / {cats[c["category"]]}</div><div class="detail-title"><p class="eyebrow">CTDC PROJECT / {cats[c["category"]]}</p><h1>{c["title"]}</h1></div><div class="detail-hero">{viewer}<div class="detail-info-side">{info_side}</div></div><a class="text-link" style="margin:25px 0 60px" href="../works.html">返回案例分享</a></div>'''+recommend_track(related_cases(c,cases),prefix='../')
  page('projects/'+c['id']+'.html',c['title'],body,'../')
-(DIST/'favicon.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><polygon points="20,10.5 44,10.5 56,32 44,53.5 20,53.5 8,32" fill="#e00515"/></svg>')
 (ROOT/'content/published-cases.json').write_text(json.dumps(cases,ensure_ascii=False,indent=2))
 print(f'Built {len(cases)+5} pages with {len(list(ASSETS.glob("*.webp")))} local images')
