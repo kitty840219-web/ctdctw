@@ -62,9 +62,9 @@ function shopFetch(url,opts,timeoutMs=10000){
 // a real GET /api/products/:slug response so they can share render code.
 // Negative variant ids so they can never collide with a real DB row.
 const TEST_PRODUCTS=[
- {slug:'test-bag',name:'CTDC 帆布提袋',category:'測試商品',description:'厚磅帆布，內襯口袋可放筆記本與隨身小物。',image_url:'assets/33dba8f28ba7.webp',variants:[{id:-1,option_label:'標準款',price:450,stock_qty:99}]},
- {slug:'test-candle',name:'空間感香氛蠟燭',category:'測試商品',description:'大豆蠟手工製作，燃燒時間約 45 小時。',image_url:'assets/7e487b69b48b.webp',variants:[{id:-2,option_label:'標準款',price:680,stock_qty:99}]},
- {slug:'test-tray',name:'陶瓷托盤',category:'測試商品',description:'手工釉燒陶瓷托盤，適合收納鑰匙、香氛或作為茶具承盤。',image_url:'assets/24a2c4fdaada.webp',variants:[{id:-3,option_label:'標準款',price:580,stock_qty:99}]},
+ {slug:'test-bag',name:'CTDC 帆布提袋',category:'測試商品',description:'厚磅帆布，內襯口袋可放筆記本與隨身小物。',image_url:'https://cdn.gamma.app/3cjbz0ve4bkt26w/design-anything/JGUOjDX2iD0cX3btxRq1r/KqqWh4o80UfEoZDmzORSy.jpg',variants:[{id:-1,option_label:'標準款',price:450,stock_qty:99}]},
+ {slug:'test-candle',name:'空間感香氛蠟燭',category:'測試商品',description:'大豆蠟手工製作，燃燒時間約 45 小時。',image_url:'https://cdn.gamma.app/3cjbz0ve4bkt26w/design-anything/wVcf3n2SYkRUweIYXInp2/Jm-s0uEiFNoIvukxeEtK1.jpg',variants:[{id:-2,option_label:'標準款',price:680,stock_qty:99}]},
+ {slug:'test-tray',name:'陶瓷托盤',category:'測試商品',description:'手工釉燒陶瓷托盤，適合收納鑰匙、香氛或作為茶具承盤。',image_url:'https://cdn.gamma.app/3cjbz0ve4bkt26w/design-anything/DFcpWC9uPQN36a6DORwxw/PGUAGVqJIJIC4cb71M0R2.jpg',variants:[{id:-3,option_label:'標準款',price:580,stock_qty:99}]},
 ];
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function money(n){return 'NT$'+Math.round(n||0).toLocaleString('zh-Hant')}
