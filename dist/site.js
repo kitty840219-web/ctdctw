@@ -53,6 +53,11 @@ if(galleryMain){
 
 const SHOP_API='https://ctdc-tw-shop-api.kitty840219.workers.dev';
 const CART_KEY='ctdc-cart';
+function shopFetch(url,opts,timeoutMs=10000){
+ const ctrl=new AbortController();
+ const timer=setTimeout(()=>ctrl.abort(),timeoutMs);
+ return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>clearTimeout(timer));
+}
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function money(n){return 'NT$'+Math.round(n||0).toLocaleString('zh-Hant')}
 function cartGet(){try{return JSON.parse(localStorage.getItem(CART_KEY)||'[]')}catch{return[]}}
@@ -81,7 +86,7 @@ function miniCartBar(){
 const shopGrid=document.getElementById('shop-grid');
 const shopCats=document.getElementById('shop-cats');
 if(shopGrid){
- fetch(`${SHOP_API}/api/products`).then(r=>r.json()).then(products=>{
+ shopFetch(`${SHOP_API}/api/products`).then(r=>r.json()).then(products=>{
   if(!Array.isArray(products)||!products.length){shopGrid.innerHTML='<p class="empty">目前尚無上架商品，敬請期待。</p>';return}
   const cats=['全部商品',...new Set(products.map(p=>p.category).filter(Boolean))];
   let active='全部商品';
@@ -112,7 +117,7 @@ const productBox=document.getElementById('product-detail');
 if(productBox){
  const slug=new URLSearchParams(location.search).get('slug');
  if(!slug){productBox.innerHTML='<p class="empty">找不到商品。</p>'}
- else fetch(`${SHOP_API}/api/products/${encodeURIComponent(slug)}`).then(async r=>{
+ else shopFetch(`${SHOP_API}/api/products/${encodeURIComponent(slug)}`).then(async r=>{
   if(!r.ok){productBox.innerHTML='<p class="empty">找不到這項商品，或已下架。</p>';return}
   const p=await r.json();
   document.title=`${p.name}｜美淑琳設計顧問有限公司`;
@@ -187,7 +192,7 @@ if(checkoutSummary){
    const btn=form.querySelector('button[type=submit]'),status=document.getElementById('checkout-status');
    btn.disabled=true;status.textContent='處理中…';status.className='form-status';
    try{
-    const res=await fetch(`${SHOP_API}/api/orders`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:cartGet().map(i=>({variantId:i.variantId,qty:i.qty})),customer})});
+    const res=await shopFetch(`${SHOP_API}/api/orders`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:cartGet().map(i=>({variantId:i.variantId,qty:i.qty})),customer})},15000);
     const data=await res.json();
     if(!res.ok||data.error){
      status.textContent=data.error==='out_of_stock'?`⚠ 「${data.detail||''}」庫存不足，請調整購物車後再試一次。`:'⚠ 送出失敗，請確認欄位填寫正確後再試一次，或改用聯絡我們頁面與我們聯繫。';
@@ -209,7 +214,7 @@ if(orderStatusBox){
  const orderNo=new URLSearchParams(location.search).get('order')||localStorage.getItem('ctdc-last-order');
  const STATUS_LABEL={pending_payment:'等待付款',paid:'已付款，準備出貨',processing:'備貨中',shipped:'已出貨',completed:'已完成',cancelled:'已取消',payment_failed:'付款失敗'};
  if(!orderNo){orderStatusBox.innerHTML='<p class="empty">找不到訂單編號。</p>'}
- else fetch(`${SHOP_API}/api/orders/${encodeURIComponent(orderNo)}`).then(async r=>{
+ else shopFetch(`${SHOP_API}/api/orders/${encodeURIComponent(orderNo)}`).then(async r=>{
   if(!r.ok){orderStatusBox.innerHTML='<p class="empty">查無此訂單。</p>';return}
   const o=await r.json();
   orderStatusBox.innerHTML=`<p class="eyebrow">訂單編號 ${escapeHtml(o.order_no)}</p><h2>${STATUS_LABEL[o.status]||escapeHtml(o.status)}</h2><div class="cart-summary-list">${o.items.map(i=>`<div class="cart-summary-row"><span>${escapeHtml(i.product_name)}${i.option_label?`（${escapeHtml(i.option_label)}）`:''} x${i.qty}</span><span>${money(i.unit_price*i.qty)}</span></div>`).join('')}</div><div class="cart-total"><span>總金額</span><strong>${money(o.subtotal)}</strong></div><p class="body-copy" style="margin-top:20px">若付款完成後狀態仍顯示「等待付款」，請稍候片刻重新整理，或透過<a class="text-link" href="contact.html" style="margin-left:6px">聯絡我們</a>與我們確認。</p>`;

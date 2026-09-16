@@ -10,10 +10,18 @@ let session = { token: localStorage.getItem('admin-token') || '', role: '', emai
 let PRODUCTS_CACHE = [];
 
 async function api(path, opts = {}) {
-  const res = await fetch(`${API}${path}`, {
-    ...opts,
-    headers: { 'Content-Type': 'application/json', ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}), ...(opts.headers || {}) },
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, {
+      ...opts,
+      signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}), ...(opts.headers || {}) },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (res.status === 401) { logout(); throw Object.assign(new Error('unauthorized'), { data: { error: 'unauthorized' } }); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error(data.error || 'request_failed'), { data });
