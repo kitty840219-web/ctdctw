@@ -11,6 +11,10 @@
 
 ## 部署步驟
 
+**這幾步一定要在一台能正常連上 Cloudflare 的電腦上做**（不能在 Claude 這個雲端工作環境裡做，這裡的網路被擋掉了）。如果手邊沒有電腦，GitHub Codespaces（在瀏覽器裡開一個有完整網路的終端機，https://github.com/codespaces ，對這個 repo 按 Code → Codespaces → Create）也可以。
+
+想省事的話，把整個 repo clone 下來後執行 `bash shop-worker/deploy.sh`，會一步一步引導你做完下面全部流程（登入 Cloudflare、建資料庫、套結構、設密鑰、部署）。想自己手動照做也可以，步驟都列在下面：
+
 ### 1. 建立 D1 資料庫
 
 ```
