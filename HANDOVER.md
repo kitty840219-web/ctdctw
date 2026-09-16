@@ -21,10 +21,19 @@ Sites 與 GitHub 是分開的部署服務。Sites 專案 ID 保存於 `.openai/h
 目前尚無正式臺灣網域，亦未修改既有 ctdcdesign.com。
 取得網域後記錄：註冊商、公司管理人、付款及續約帳號、DNS 提供者、現有 A/AAAA/CNAME/TXT/MX 記錄與 SSL 狀態。移轉時保留郵件 MX/TXT，先驗證新網站再調整網站記錄；驗證 HTTPS、www 與非 www 轉址，及所有頁面、圖片與聯絡連結。
 
+## 周邊商品商店（額外的兩個部署單位）
+
+主網站（`dist/`）之外，商店功能還有兩個獨立部署、獨立網址的東西，移交時要一併轉移：
+
+- `shop-worker/`：Cloudflare Worker，商品／庫存／訂單資料庫（D1）與綠界金流都在這裡。機密（綠界 HashKey/HashIV、後台 bootstrap 密鑰）存在 Cloudflare 的 Worker Secrets，不在程式碼或 Git 歷史裡。
+- `admin/`：後台管理網站，部署在 Cloudflare Pages，跟主網站是不同網域。本身不含機密，所有驗證都在 `shop-worker` 那邊處理（帳密雜湊存在 D1 資料庫）。
+
+公司接手時需要：轉移或重新申請 Cloudflare 帳號存取權（D1 資料庫、Worker、Pages 專案）、重新設定 Worker Secrets（尤其綠界正式商店的 HashKey/HashIV，不會隨帳號轉移自動帶過去）、確認 `shop-worker/worker.js` 與 `admin/index.html` 裡的網址設定（`SHOP_API`、CORS 白名單）都指向正確的正式網址。詳細步驟見 `shop-worker/README.md` 與 `admin/README.md`。
+
 ## 安全與回復
 
-本版為純靜態網站，不含資料庫、後台、表單收件服務或 API 金鑰。未來增加服務時，將機密存入部署平台的 Secrets，文件只記錄變數名稱與用途。
-回復網站可在 GitHub revert 該次 commit 再部署，或在對應平台回復已驗證版本。不要刪除 Git 歷史。
+主網站（`dist/`）本身為純靜態網站，不含資料庫或 API 金鑰。周邊商品商店（`shop-worker/`）含資料庫與金流，機密一律存在部署平台的 Secrets，文件只記錄變數名稱與用途，不會出現在程式碼或 Git 歷史裡。
+回復網站可在 GitHub revert 該次 commit 再部署，或在對應平台回復已驗證版本。不要刪除 Git 歷史。資料庫（訂單、商品）的異動不受 Git revert 影響，需要另外用 D1 的備份／匯出機制處理。
 
 ## 內容來源與限制
 

@@ -1,0 +1,26 @@
+name = "ctdc-tw-shop-api"
+main = "worker.js"
+compatibility_date = "2024-09-16"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ctdc-tw-shop"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+# Runs every 15 minutes: releases stock reserved by carts that never
+# finished paying (ECPay never called /api/payment/notify).
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+# This worker's own public URL — ECPay's ReturnURL notify must be able to
+# reach it. Update after `wrangler deploy` prints the real *.workers.dev
+# URL, or after a custom domain is attached.
+SHOP_API_ORIGIN = "https://ctdc-tw-shop-api.kitty840219.workers.dev"
+
+# ECPay's own published sandbox merchant — safe to commit, staging only,
+# never touches real money. Switch ECPAY_ENV to "production" and put the
+# real MerchantID/HashKey/HashIV (as secrets, see README) once the actual
+# 特約商店 application is approved.
+ECPAY_ENV = "staging"
+ECPAY_MERCHANT_ID = "2000132"

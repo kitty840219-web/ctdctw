@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>後台管理｜美淑琳設計顧問有限公司</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="admin.css">
+<script src="admin.js" defer></script>
+</head>
+<body>
+<div id="login-view" class="login-view">
+ <form id="login-form" class="login-form">
+  <h1>CTDC 後台管理</h1>
+  <label>電子信箱<input type="email" name="email" required autocomplete="username"></label>
+  <label>密碼<input type="password" name="password" required autocomplete="current-password"></label>
+  <button type="submit">登入</button>
+  <p class="status" id="login-status" role="status"></p>
+ </form>
+</div>
+<div id="app-view" class="app-view" hidden>
+ <aside class="sidebar">
+  <div class="sidebar-brand">CTDC 後台</div>
+  <nav>
+   <button type="button" data-view="orders" class="nav-btn active">訂單管理</button>
+   <button type="button" data-view="products" class="nav-btn" data-role="manager">商品管理</button>
+   <button type="button" data-view="users" class="nav-btn" data-role="super_admin">帳號管理</button>
+  </nav>
+  <div class="sidebar-user">
+   <span id="current-user"></span>
+   <button type="button" id="logout-btn">登出</button>
+  </div>
+ </aside>
+ <main>
+  <section id="view-orders" class="view"></section>
+  <section id="view-products" class="view" hidden></section>
+  <section id="view-users" class="view" hidden></section>
+ </main>
+</div>
+</body>
+</html>
