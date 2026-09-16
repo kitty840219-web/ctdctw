@@ -28,17 +28,26 @@ async function api(path, opts = {}) {
   return data;
 }
 
+let demoMode = false;
+
 function logout() {
   localStorage.removeItem('admin-token');
   session = { token: '', role: '', email: '' };
+  demoMode = false;
   document.getElementById('app-view').hidden = true;
   document.getElementById('login-view').hidden = false;
+}
+
+function enterDemoMode() {
+  demoMode = true;
+  session = { token: '', role: 'super_admin', email: '（示範模式，未登入）' };
+  enterApp();
 }
 
 function enterApp() {
   document.getElementById('login-view').hidden = true;
   document.getElementById('app-view').hidden = false;
-  document.getElementById('current-user').textContent = `${session.email}（${ROLE_LABEL[session.role] || session.role}）`;
+  document.getElementById('current-user').textContent = demoMode ? session.email : `${session.email}（${ROLE_LABEL[session.role] || session.role}）`;
   document.querySelectorAll('.nav-btn[data-role]').forEach((btn) => {
     btn.hidden = (ROLE_RANK[session.role] || 0) < (ROLE_RANK[btn.dataset.role] || 0);
   });
@@ -73,7 +82,13 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     status.textContent = ''; e.target.reset();
     enterApp();
   } catch (err) {
-    status.textContent = '⚠ 登入失敗，請確認帳號密碼'; status.className = 'status error';
+    if (err.data) {
+      status.textContent = '⚠ 登入失敗，請確認帳號密碼'; status.className = 'status error';
+    } else {
+      status.innerHTML = '⚠ 連不到後台伺服器（尚未部署，或部署中）。<button type="button" id="demo-mode-btn" style="margin-left:8px;text-decoration:underline;border:0;background:none;color:inherit;cursor:pointer">先看示範資料</button>';
+      status.className = 'status error';
+      document.getElementById('demo-mode-btn').addEventListener('click', enterDemoMode);
+    }
   }
 });
 
@@ -341,7 +356,18 @@ async function renderProductsList() {
       </div>`).join('');
     list.querySelectorAll('[data-act]').forEach((btn) => btn.addEventListener('click', () => handleProductAction(btn)));
   } catch (err) {
-    list.innerHTML = '<p class="empty">載入失敗，請重新整理再試。</p>';
+    const TEST_PRODUCTS = [
+      { name: 'CTDC 帆布提袋', price: 450 },
+      { name: '空間感香氛蠟燭', price: 680 },
+      { name: '陶瓷托盤', price: 580 },
+    ];
+    list.innerHTML = `<p class="empty">尚未連接後端，以下為示範資料（跟前台商店頁的測試商品一致；shop-worker 部署好之後會自動換成真正的商品，不用手動改）。</p>` + TEST_PRODUCTS.map((p) => `
+      <div class="product-card">
+        <div class="product-card-head">
+          <div><h3>${esc(p.name)}<span class="tag" style="background:#f5e6e4;color:var(--danger)">測試商品</span></h3></div>
+        </div>
+        <table class="data-table"><thead><tr><th>示範價格</th></tr></thead><tbody><tr><td>NT$${p.price.toLocaleString()}</td></tr></tbody></table>
+      </div>`).join('');
   }
 }
 

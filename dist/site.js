@@ -115,7 +115,8 @@ if(shopGrid){
   shopCats?.closest('.shop-layout')?.classList.add('no-cats');
   const status=document.getElementById('shop-status');
   if(status)status.innerHTML='<p class="shop-placeholder-note">目前網站建置測試中，商品陸續上架中，敬請期待。</p>';
-  shopGrid.innerHTML=Array.from({length:3},(_,i)=>`<div class="project placeholder-card" aria-hidden="true"><div class="image">測試商品</div><div class="project-meta"><div><h3>測試商品 ${i+1}</h3><small>敬請期待</small></div></div></div>`).join('');
+  const TEST_PRODUCTS=[{name:'CTDC 帆布提袋',price:450,img:'assets/33dba8f28ba7.webp'},{name:'空間感香氛蠟燭',price:680,img:'assets/7e487b69b48b.webp'},{name:'陶瓷托盤',price:580,img:'assets/24a2c4fdaada.webp'}];
+  shopGrid.innerHTML=TEST_PRODUCTS.map(p=>`<div class="project placeholder-card" aria-hidden="true"><div class="image"><img src="${p.img}" alt="測試商品" loading="lazy" decoding="async"><span class="test-tag">測試商品</span></div><div class="project-meta"><div><h3>${escapeHtml(p.name)}</h3><small>${money(p.price)}</small></div></div></div>`).join('');
  });
 }
 
