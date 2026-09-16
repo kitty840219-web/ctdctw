@@ -6,8 +6,12 @@ const SHOP_ALLOWED_ORIGINS = [
   'https://kitty840219-web.github.io',
 ];
 // Origins allowed to call the *admin* API (the separate admin site).
+// Currently served from the same GitHub Pages origin as the shop, at
+// /ctdctw/admin/ — CORS only cares about the origin, not the path, so
+// this matches. Add a different origin here if admin ever moves to its
+// own domain (e.g. Cloudflare Pages) instead.
 const ADMIN_ALLOWED_ORIGINS = [
-  'https://ctdc-tw-admin.pages.dev',
+  'https://kitty840219-web.github.io',
 ];
 
 function cors(origin, allowedList) {
