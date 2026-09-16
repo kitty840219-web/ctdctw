@@ -102,6 +102,7 @@ if(shopGrid){
   if(shopCats){
    shopCats.innerHTML=cats.map(c=>`<button type="button" data-cat="${escapeHtml(c)}" class="${c===active?'active':''}">${escapeHtml(c)}</button>`).join('');
    shopCats.hidden=cats.length<=1;
+   shopCats.closest('.shop-layout')?.classList.toggle('no-cats',shopCats.hidden);
    shopCats.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
     active=btn.dataset.cat;
     shopCats.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===btn));
@@ -110,7 +111,12 @@ if(shopGrid){
   }
   renderGrid();
   miniCartBar();
- }).catch(()=>{shopGrid.innerHTML='<p class="empty">商品載入失敗，請稍後再試。</p>'});
+ }).catch(()=>{
+  shopCats?.closest('.shop-layout')?.classList.add('no-cats');
+  const status=document.getElementById('shop-status');
+  if(status)status.innerHTML='<p class="shop-placeholder-note">目前網站建置測試中，商品陸續上架中，敬請期待。</p>';
+  shopGrid.innerHTML=Array.from({length:3},(_,i)=>`<div class="project placeholder-card" aria-hidden="true"><div class="image">測試商品</div><div class="project-meta"><div><h3>測試商品 ${i+1}</h3><small>敬請期待</small></div></div></div>`).join('');
+ });
 }
 
 const productBox=document.getElementById('product-detail');
