@@ -63,16 +63,48 @@ function cartUpdateQty(variantId,qty){const items=cartGet();const it=items.find(
 function updateCartBadge(){const badge=document.getElementById('cart-count');if(!badge)return;const count=cartGet().reduce((n,i)=>n+i.qty,0);badge.textContent=String(count);badge.hidden=count===0}
 updateCartBadge();
 
+function miniCartBar(){
+ let bar=document.getElementById('mini-cart-bar');
+ if(!bar){
+  bar=document.createElement('div');
+  bar.id='mini-cart-bar';bar.className='mini-cart-bar';
+  bar.innerHTML='<span class="mc-info">購物車共 <strong id="mc-count">0</strong> 件・<strong id="mc-total">NT$0</strong></span><a href="cart.html">前往購物車 →</a>';
+  document.body.appendChild(bar);
+ }
+ const items=cartGet();
+ const count=items.reduce((n,i)=>n+i.qty,0);
+ bar.querySelector('#mc-count').textContent=String(count);
+ bar.querySelector('#mc-total').textContent=money(items.reduce((n,i)=>n+i.price*i.qty,0));
+ bar.classList.toggle('show',count>0);
+}
+
 const shopGrid=document.getElementById('shop-grid');
+const shopCats=document.getElementById('shop-cats');
 if(shopGrid){
  fetch(`${SHOP_API}/api/products`).then(r=>r.json()).then(products=>{
   if(!Array.isArray(products)||!products.length){shopGrid.innerHTML='<p class="empty">目前尚無上架商品，敬請期待。</p>';return}
-  shopGrid.innerHTML=products.map(p=>{
-   const prices=p.variants.map(v=>v.price);
-   const inStock=p.variants.some(v=>v.stock_qty>0);
-   const priceLabel=prices.length&&Math.min(...prices)!==Math.max(...prices)?`${money(Math.min(...prices))} 起`:money(prices[0]||0);
-   return `<a class="project" href="product.html?slug=${encodeURIComponent(p.slug)}"><div class="image">${p.image_url?`<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async">`:''}</div><div class="project-meta"><div><h3>${escapeHtml(p.name)}</h3><small${inStock?'':' class="out-of-stock"'}>${priceLabel}${inStock?'':'・已售完'}</small></div><span aria-hidden="true">↗</span></div></a>`;
-  }).join('');
+  const cats=['全部商品',...new Set(products.map(p=>p.category).filter(Boolean))];
+  let active='全部商品';
+  function renderGrid(){
+   const list=active==='全部商品'?products:products.filter(p=>p.category===active);
+   shopGrid.innerHTML=list.map(p=>{
+    const prices=p.variants.map(v=>v.price);
+    const inStock=p.variants.some(v=>v.stock_qty>0);
+    const priceLabel=prices.length&&Math.min(...prices)!==Math.max(...prices)?`${money(Math.min(...prices))} 起`:money(prices[0]||0);
+    return `<a class="project" href="product.html?slug=${encodeURIComponent(p.slug)}"><div class="image">${p.image_url?`<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async">`:''}</div><div class="project-meta"><div><h3>${escapeHtml(p.name)}</h3><small${inStock?'':' class="out-of-stock"'}>${priceLabel}${inStock?'':'・已售完'}</small></div><span aria-hidden="true">↗</span></div></a>`;
+   }).join('')||'<p class="empty">這個分類目前沒有商品。</p>';
+  }
+  if(shopCats){
+   shopCats.innerHTML=cats.map(c=>`<button type="button" data-cat="${escapeHtml(c)}" class="${c===active?'active':''}">${escapeHtml(c)}</button>`).join('');
+   shopCats.hidden=cats.length<=1;
+   shopCats.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+    active=btn.dataset.cat;
+    shopCats.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===btn));
+    renderGrid();
+   }));
+  }
+  renderGrid();
+  miniCartBar();
  }).catch(()=>{shopGrid.innerHTML='<p class="empty">商品載入失敗，請稍後再試。</p>'});
 }
 
@@ -86,17 +118,35 @@ if(productBox){
   document.title=`${p.name}｜美淑琳設計顧問有限公司`;
   const crumb=document.getElementById('product-crumb');if(crumb)crumb.textContent=p.name;
   const variantOptions=p.variants.map(v=>`<option value="${v.id}" data-price="${v.price}" data-label="${escapeHtml(v.option_label||'標準款')}" ${v.stock_qty<1?'disabled':''}>${escapeHtml(v.option_label||'標準款')}・${money(v.price)}${v.stock_qty<1?'（缺貨）':''}</option>`).join('');
-  productBox.innerHTML=`<div>${p.image_url?`<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}">`:''}</div><div><p class="eyebrow">CTDC SHOP</p><h1>${escapeHtml(p.name)}</h1><p class="body-copy">${escapeHtml(p.description).replace(/\n/g,'<br>')}</p><form id="add-to-cart-form"><div class="form-grid"><label class="form-field"><span>規格</span><select name="variantId" required>${variantOptions}</select></label><label class="form-field" style="max-width:140px"><span>數量</span><input type="number" name="qty" value="1" min="1" max="99" required></label></div><div class="form-actions"><button type="submit">加入購物車</button><p class="form-status" id="add-to-cart-status" role="status"></p></div></form></div>`;
-  const form=document.getElementById('add-to-cart-form');
+  const allSoldOut=p.variants.every(v=>v.stock_qty<1);
+  productBox.innerHTML=`<div class="shop-detail-media">${p.image_url?`<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}">`:''}</div><div><p class="eyebrow">${p.category?escapeHtml(p.category):'CTDC SHOP'}</p><h1>${escapeHtml(p.name)}</h1><p class="body-copy">${escapeHtml(p.description).replace(/\n/g,'<br>')}</p></div>`;
+  const bar=document.createElement('div');
+  bar.className='product-actionbar';
+  bar.innerHTML=`<form id="add-to-cart-form" class="pa-row"><select name="variantId" required>${variantOptions}</select><span class="pa-qty"><button type="button" data-step="-1" aria-label="減少數量">−</button><input type="number" name="qty" value="1" min="1" max="99" required><button type="button" data-step="1" aria-label="增加數量">＋</button></span><span class="pa-total">小計<strong id="pa-total-amount">NT$0</strong></span><button type="submit"${allSoldOut?' disabled':''}>${allSoldOut?'已售完':'加入購物車'}</button></form><p class="form-status" id="add-to-cart-status" role="status"></p>`;
+  document.body.appendChild(bar);
+  const form=bar.querySelector('#add-to-cart-form');
+  const select=form.querySelector('[name=variantId]'),qtyInput=form.querySelector('[name=qty]'),totalEl=bar.querySelector('#pa-total-amount');
+  function updateTotal(){
+   const opt=select.selectedOptions[0];
+   const qty=Math.max(1,Math.min(99,parseInt(qtyInput.value,10)||1));
+   totalEl.textContent=opt?money(parseFloat(opt.dataset.price)*qty):'NT$0';
+  }
+  select.addEventListener('change',updateTotal);
+  qtyInput.addEventListener('input',updateTotal);
+  form.querySelectorAll('[data-step]').forEach(btn=>btn.addEventListener('click',()=>{
+   qtyInput.value=Math.max(1,Math.min(99,(parseInt(qtyInput.value,10)||1)+parseInt(btn.dataset.step,10)));
+   updateTotal();
+  }));
+  updateTotal();
   form.addEventListener('submit',e=>{
    e.preventDefault();
-   const select=form.querySelector('[name=variantId]');
    const opt=select.selectedOptions[0];
    if(!opt||opt.disabled)return;
-   const qty=Math.max(1,Math.min(99,parseInt(form.querySelector('[name=qty]').value,10)||1));
+   const qty=Math.max(1,Math.min(99,parseInt(qtyInput.value,10)||1));
    cartAdd({variantId:parseInt(select.value,10),qty,productName:p.name,optionLabel:opt.dataset.label,price:parseFloat(opt.dataset.price),image:p.image_url});
    const status=document.getElementById('add-to-cart-status');
    status.textContent='已加入購物車';status.className='form-status ok';
+   miniCartBar();
    setTimeout(()=>{status.textContent='';status.className='form-status'},2500);
   });
  }).catch(()=>{productBox.innerHTML='<p class="empty">商品載入失敗，請稍後再試。</p>'});

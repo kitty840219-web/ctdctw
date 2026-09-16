@@ -156,7 +156,7 @@ async function renderProductsList() {
     list.innerHTML = products.map((p) => `
       <div class="product-card">
         <div class="product-card-head">
-          <div><h3>${esc(p.name)}<span class="tag tag-${p.status}">${PRODUCT_STATUS_LABEL[p.status] || p.status}</span></h3><p class="muted">/${esc(p.slug)}</p></div>
+          <div><h3>${esc(p.name)}<span class="tag tag-${p.status}">${PRODUCT_STATUS_LABEL[p.status] || p.status}</span></h3><p class="muted">/${esc(p.slug)}${p.category ? ` ・ ${esc(p.category)}` : ''}</p></div>
           <div class="product-card-actions"><button type="button" data-act="edit-product" data-id="${p.id}">編輯</button><button type="button" data-act="delete-product" data-id="${p.id}">刪除</button></div>
         </div>
         <table class="data-table"><thead><tr><th>SKU</th><th>規格</th><th>價格</th><th>庫存</th><th></th></tr></thead><tbody>
@@ -195,6 +195,7 @@ function openProductForm(product) {
     <form id="product-form">
       <label>商品名稱 *<input name="name" required value="${esc(product?.name || '')}"></label>
       <label>網址代稱（slug，只能用小寫英數字與 -）*<input name="slug" required pattern="[a-z0-9-]+" value="${esc(product?.slug || '')}"></label>
+      <label>分類（會顯示在商店頁的分類列，例如：提袋、香氛、餐具）<input name="category" value="${esc(product?.category || '')}"></label>
       <label>商品描述<textarea name="description" rows="4">${esc(product?.description || '')}</textarea></label>
       <label>圖片網址<input name="imageUrl" value="${esc(product?.image_url || '')}"></label>
       <label>狀態<select name="status">${Object.entries(PRODUCT_STATUS_LABEL).map(([k, v]) => `<option value="${k}" ${product?.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
@@ -205,7 +206,7 @@ function openProductForm(product) {
   modal.querySelector('#product-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const body = { name: fd.get('name'), slug: fd.get('slug'), description: fd.get('description'), imageUrl: fd.get('imageUrl'), status: fd.get('status'), sortOrder: parseInt(fd.get('sortOrder'), 10) || 0 };
+    const body = { name: fd.get('name'), slug: fd.get('slug'), category: fd.get('category'), description: fd.get('description'), imageUrl: fd.get('imageUrl'), status: fd.get('status'), sortOrder: parseInt(fd.get('sortOrder'), 10) || 0 };
     const statusEl = modal.querySelector('#product-form-status');
     try {
       if (isNew) await api('/admin/api/products', { method: 'POST', body: JSON.stringify(body) });

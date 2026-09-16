@@ -38,7 +38,7 @@ async function readJson(request) {
 
 async function listProducts(env) {
   const { results: products } = await env.DB.prepare(
-    `SELECT id, slug, name, description, image_url, sort_order FROM products
+    `SELECT id, slug, name, category, description, image_url, sort_order FROM products
      WHERE status = 'published' ORDER BY sort_order ASC, id DESC`,
   ).all();
   const { results: variants } = await env.DB.prepare(
@@ -52,7 +52,7 @@ async function listProducts(env) {
 
 async function getProduct(env, slug) {
   const p = await env.DB.prepare(
-    `SELECT id, slug, name, description, image_url FROM products WHERE slug = ? AND status = 'published'`,
+    `SELECT id, slug, name, category, description, image_url FROM products WHERE slug = ? AND status = 'published'`,
   ).bind(slug).first();
   if (!p) return null;
   const { results: variants } = await env.DB.prepare(
@@ -200,7 +200,7 @@ async function adminLogin(env, body) {
   return { token, email: user.email, role: user.role };
 }
 
-const PRODUCT_FIELDS = ['slug', 'name', 'description', 'image_url', 'status', 'sort_order'];
+const PRODUCT_FIELDS = ['slug', 'name', 'category', 'description', 'image_url', 'status', 'sort_order'];
 const VARIANT_FIELDS = ['sku', 'option_label', 'price', 'stock_qty', 'sort_order'];
 function pick(body, fields, camelMap) {
   const out = {};
@@ -210,7 +210,7 @@ function pick(body, fields, camelMap) {
   }
   return out;
 }
-const PRODUCT_CAMEL = { slug: 'slug', name: 'name', description: 'description', image_url: 'imageUrl', status: 'status', sort_order: 'sortOrder' };
+const PRODUCT_CAMEL = { slug: 'slug', name: 'name', category: 'category', description: 'description', image_url: 'imageUrl', status: 'status', sort_order: 'sortOrder' };
 const VARIANT_CAMEL = { sku: 'sku', option_label: 'optionLabel', price: 'price', stock_qty: 'stockQty', sort_order: 'sortOrder' };
 
 async function adminListProducts(env) {

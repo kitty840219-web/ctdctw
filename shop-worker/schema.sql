@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS products (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   slug         TEXT NOT NULL UNIQUE,
   name         TEXT NOT NULL,
+  category     TEXT NOT NULL DEFAULT '',
   description  TEXT NOT NULL DEFAULT '',
   image_url    TEXT NOT NULL DEFAULT '',
   status       TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published','archived')),
