@@ -153,6 +153,10 @@ async function handlePaymentNotify(env, request) {
       await env.DB.prepare(
         `UPDATE orders SET status = 'paid', payment_trade_no = ?, paid_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`,
       ).bind(params.TradeNo || '', order.id).run();
+      const { results: paidItems } = await env.DB.prepare(`SELECT variant_id, qty FROM order_items WHERE order_id = ?`).bind(order.id).all();
+      for (const it of paidItems) {
+        await env.DB.prepare(`UPDATE product_variants SET sold_qty = sold_qty + ? WHERE id = ?`).bind(it.qty, it.variant_id).run();
+      }
     } else {
       await env.DB.prepare(`UPDATE orders SET status = 'payment_failed', updated_at = datetime('now') WHERE id = ?`).bind(order.id).run();
       await restoreStockForOrder(env, order.id);

@@ -32,6 +32,31 @@ main{flex:1;padding:36px 44px;overflow-x:auto}
 
 .loading,.empty{color:var(--muted);padding:30px 0}
 
+.view-head .chip-toggle{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.view-head .chip-toggle.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.tab-bar{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:22px;flex-wrap:wrap}
+.tab-bar button{border:0;background:none;padding:12px 18px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab-bar button:hover{color:var(--ink)}
+.tab-bar button.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:500}
+
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:8px}
+.stat-card{background:#fff;border:1px solid var(--line);padding:20px 22px;text-align:left;cursor:default;font:inherit;color:inherit}
+button.stat-card{cursor:pointer}
+button.stat-card:hover{border-color:var(--accent)}
+.stat-card .stat-label{display:block;font-size:12px;color:var(--muted);letter-spacing:1px;margin-bottom:10px}
+.stat-card .stat-value{font-size:26px;font-weight:600}
+.stat-card.stat-warn .stat-value{color:var(--danger)}
+
+.section-sub{font-size:14px;margin:28px 0 12px;color:var(--muted)}
+
+.bar-chart{display:flex;align-items:flex-end;gap:10px;height:170px;background:#fff;border:1px solid var(--line);padding:16px 16px 10px;margin-top:20px;overflow-x:auto}
+.bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;flex:0 0 auto;min-width:28px;height:100%}
+.bar-col .bar{width:20px;background:var(--accent);border-radius:2px 2px 0 0}
+.bar-col .bar-label{font-size:10px;color:var(--muted);white-space:nowrap}
+
+.data-table tbody tr.row-warn td:nth-child(4){color:var(--danger);font-weight:600}
+
 .data-table{width:100%;border-collapse:collapse;background:#fff}
 .data-table th,.data-table td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px}
 .data-table th{color:var(--muted);font-weight:500;font-size:12px;letter-spacing:1px}

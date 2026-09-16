@@ -34,14 +34,16 @@ function enterApp() {
   document.querySelectorAll('.nav-btn[data-role]').forEach((btn) => {
     btn.hidden = (ROLE_RANK[session.role] || 0) < (ROLE_RANK[btn.dataset.role] || 0);
   });
-  showView('orders');
+  showView('dashboard');
 }
 
 function showView(name) {
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   document.querySelectorAll('.view').forEach((v) => { v.hidden = v.id !== `view-${name}`; });
+  if (name === 'dashboard') loadDashboard();
   if (name === 'orders') loadOrders();
   if (name === 'products') loadProducts();
+  if (name === 'sales') loadSales();
   if (name === 'users') loadUsers();
 }
 
@@ -77,25 +79,141 @@ function openModal(html) {
   return modal;
 }
 
+// ---- dashboard ----
+
+const SETTLED_ORDER_STATUSES = ['paid', 'processing', 'shipped', 'completed'];
+
+async function loadDashboard() {
+  const box = document.getElementById('view-dashboard');
+  box.innerHTML = `<div class="view-head"><h2>總覽</h2></div><div id="dashboard-cards" class="stat-grid"><p class="loading">載入中…</p></div><div id="dashboard-lowstock"></div>`;
+  let orders;
+  try {
+    orders = await api('/admin/api/orders');
+  } catch (err) {
+    document.getElementById('dashboard-cards').innerHTML = '<p class="empty">載入失敗，請重新整理再試。</p>';
+    return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const toShip = orders.filter((o) => ['paid', 'processing'].includes(o.status)).length;
+  const todayOrders = orders.filter((o) => (o.created_at || '').slice(0, 10) === today);
+  const todayRevenue = todayOrders.filter((o) => SETTLED_ORDER_STATUSES.includes(o.status)).reduce((n, o) => n + o.subtotal, 0);
+  let cardsHtml = `
+    <button type="button" class="stat-card" data-view="orders"><span class="stat-label">待出貨</span><strong class="stat-value">${toShip}</strong></button>
+    <div class="stat-card"><span class="stat-label">今日訂單</span><strong class="stat-value">${todayOrders.length}</strong></div>
+    <div class="stat-card"><span class="stat-label">今日營業額</span><strong class="stat-value">NT$${todayRevenue.toLocaleString()}</strong></div>
+  `;
+  if ((ROLE_RANK[session.role] || 0) >= ROLE_RANK.manager) {
+    try {
+      const products = await api('/admin/api/products');
+      const lowStock = [];
+      products.forEach((p) => p.variants.forEach((v) => { if (v.stock_qty < 5) lowStock.push({ product: p.name, variant: v.option_label || '標準款', stock: v.stock_qty }); }));
+      cardsHtml += `<button type="button" class="stat-card${lowStock.length ? ' stat-warn' : ''}" data-view="products"><span class="stat-label">低庫存規格</span><strong class="stat-value">${lowStock.length}</strong></button>`;
+      document.getElementById('dashboard-cards').innerHTML = cardsHtml;
+      const lowBox = document.getElementById('dashboard-lowstock');
+      if (lowStock.length) {
+        lowBox.innerHTML = `<h3 class="section-sub">低庫存提醒（少於 5 件）</h3><table class="data-table"><thead><tr><th>商品</th><th>規格</th><th>庫存</th></tr></thead><tbody>${lowStock.map((l) => `<tr><td>${esc(l.product)}</td><td>${esc(l.variant)}</td><td>${l.stock}</td></tr>`).join('')}</tbody></table>`;
+      }
+    } catch (err) {
+      document.getElementById('dashboard-cards').innerHTML = cardsHtml;
+    }
+  } else {
+    document.getElementById('dashboard-cards').innerHTML = cardsHtml;
+  }
+  document.querySelectorAll('#dashboard-cards [data-view]').forEach((el) => el.addEventListener('click', () => showView(el.dataset.view)));
+}
+
+// ---- sales ----
+
+const SALES_RANGES = [
+  { key: 'today', label: '今日' },
+  { key: 'yesterday', label: '昨日' },
+  { key: 'last7', label: '過去 7 天' },
+  { key: 'last30', label: '過去 30 天' },
+];
+let salesOrdersCache = null;
+
+async function loadSales() {
+  const box = document.getElementById('view-sales');
+  box.innerHTML = `<div class="view-head"><h2>銷售分析</h2></div><div class="tab-bar" id="sales-range">${SALES_RANGES.map((r, i) => `<button type="button" data-key="${r.key}" class="${i === 0 ? 'active' : ''}">${r.label}</button>`).join('')}</div><div id="sales-body"><p class="loading">載入中…</p></div>`;
+  try {
+    salesOrdersCache = await api('/admin/api/orders');
+  } catch (err) {
+    document.getElementById('sales-body').innerHTML = '<p class="empty">載入失敗，請重新整理再試。</p>';
+    return;
+  }
+  document.querySelectorAll('#sales-range button').forEach((btn) => btn.addEventListener('click', () => {
+    document.querySelectorAll('#sales-range button').forEach((b) => b.classList.toggle('active', b === btn));
+    renderSales(btn.dataset.key);
+  }));
+  renderSales('today');
+}
+
+function renderSales(range) {
+  const body = document.getElementById('sales-body');
+  const now = new Date();
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  let start;
+  if (range === 'yesterday') { end.setUTCDate(end.getUTCDate() - 1); start = new Date(end); }
+  else if (range === 'last7') { start = new Date(end); start.setUTCDate(start.getUTCDate() - 6); }
+  else if (range === 'last30') { start = new Date(end); start.setUTCDate(start.getUTCDate() - 29); }
+  else { start = new Date(end); }
+  const endExclusive = new Date(end);
+  endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+  const inRange = salesOrdersCache.filter((o) => {
+    const t = new Date((o.created_at || '').replace(' ', 'T') + 'Z');
+    return t >= start && t < endExclusive && SETTLED_ORDER_STATUSES.includes(o.status);
+  });
+  const revenue = inRange.reduce((n, o) => n + o.subtotal, 0);
+  const count = inRange.length;
+  const aov = count ? Math.round(revenue / count) : 0;
+  const byDay = {};
+  inRange.forEach((o) => { const d = (o.created_at || '').slice(0, 10); byDay[d] = (byDay[d] || 0) + o.subtotal; });
+  const dayKeys = Object.keys(byDay).sort();
+  const maxVal = Math.max(1, ...Object.values(byDay));
+  body.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><span class="stat-label">銷售額</span><strong class="stat-value">NT$${revenue.toLocaleString()}</strong></div>
+      <div class="stat-card"><span class="stat-label">訂單數</span><strong class="stat-value">${count}</strong></div>
+      <div class="stat-card"><span class="stat-label">平均訂單金額</span><strong class="stat-value">NT$${aov.toLocaleString()}</strong></div>
+    </div>
+    ${dayKeys.length ? `<div class="bar-chart">${dayKeys.map((d) => `<div class="bar-col"><div class="bar" style="height:${Math.max(4, Math.round((byDay[d] / maxVal) * 140))}px" title="${d}：NT$${byDay[d].toLocaleString()}"></div><span class="bar-label">${d.slice(5)}</span></div>`).join('')}</div>` : '<p class="empty">這段期間沒有已成立的訂單。</p>'}
+  `;
+}
+
 // ---- orders ----
+
+const ORDER_TABS = [
+  { key: 'unpaid', label: '尚未付款', statuses: ['pending_payment'] },
+  { key: 'toship', label: '待出貨', statuses: ['paid', 'processing'] },
+  { key: 'shipped', label: '已出貨', statuses: ['shipped'] },
+  { key: 'done', label: '已完成', statuses: ['completed'] },
+  { key: 'other', label: '已取消／異常', statuses: ['cancelled', 'payment_failed'] },
+];
+let ordersCache = [];
 
 async function loadOrders() {
   const box = document.getElementById('view-orders');
-  box.innerHTML = `<div class="view-head"><h2>訂單管理</h2><select id="order-filter"><option value="">全部狀態</option>${Object.entries(ORDER_STATUS_LABEL).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div><div id="orders-table"><p class="loading">載入中…</p></div>`;
-  document.getElementById('order-filter').addEventListener('change', (e) => renderOrdersTable(e.target.value));
-  renderOrdersTable('');
+  box.innerHTML = `<div class="view-head"><h2>訂單管理</h2></div><div class="tab-bar" id="order-tabs">${ORDER_TABS.map((t, i) => `<button type="button" data-key="${t.key}" class="${t.key === 'toship' ? 'active' : ''}">${t.label}</button>`).join('')}</div><div id="orders-table"><p class="loading">載入中…</p></div>`;
+  try {
+    ordersCache = await api('/admin/api/orders');
+  } catch (err) {
+    document.getElementById('orders-table').innerHTML = '<p class="empty">載入失敗，請重新整理再試。</p>';
+    return;
+  }
+  document.querySelectorAll('#order-tabs button').forEach((btn) => btn.addEventListener('click', () => {
+    document.querySelectorAll('#order-tabs button').forEach((b) => b.classList.toggle('active', b === btn));
+    renderOrdersTable(btn.dataset.key);
+  }));
+  renderOrdersTable('toship');
 }
 
-async function renderOrdersTable(status) {
+function renderOrdersTable(tabKey) {
+  const tab = ORDER_TABS.find((t) => t.key === tabKey) || ORDER_TABS[1];
+  const orders = ordersCache.filter((o) => tab.statuses.includes(o.status));
   const tableBox = document.getElementById('orders-table');
-  try {
-    const orders = await api(`/admin/api/orders${status ? `?status=${encodeURIComponent(status)}` : ''}`);
-    if (!orders.length) { tableBox.innerHTML = '<p class="empty">沒有符合條件的訂單。</p>'; return; }
-    tableBox.innerHTML = `<table class="data-table"><thead><tr><th>訂單編號</th><th>收件人</th><th>狀態</th><th>金額</th><th>建立時間</th></tr></thead><tbody>${orders.map((o) => `<tr data-id="${o.id}"><td>${esc(o.order_no)}</td><td>${esc(o.customer_name)}</td><td>${ORDER_STATUS_LABEL[o.status] || esc(o.status)}</td><td>NT$${o.subtotal.toLocaleString()}</td><td>${esc(o.created_at)}</td></tr>`).join('')}</tbody></table>`;
-    tableBox.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', () => openOrderDetail(tr.dataset.id, status)));
-  } catch (err) {
-    tableBox.innerHTML = '<p class="empty">載入失敗，請重新整理再試。</p>';
-  }
+  if (!orders.length) { tableBox.innerHTML = '<p class="empty">這個分類目前沒有訂單。</p>'; return; }
+  tableBox.innerHTML = `<table class="data-table"><thead><tr><th>訂單編號</th><th>收件人</th><th>狀態</th><th>金額</th><th>建立時間</th></tr></thead><tbody>${orders.map((o) => `<tr data-id="${o.id}"><td>${esc(o.order_no)}</td><td>${esc(o.customer_name)}</td><td>${ORDER_STATUS_LABEL[o.status] || esc(o.status)}</td><td>NT$${o.subtotal.toLocaleString()}</td><td>${esc(o.created_at)}</td></tr>`).join('')}</tbody></table>`;
+  tableBox.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', () => openOrderDetail(tr.dataset.id, tabKey)));
 }
 
 async function openOrderDetail(id, currentFilter) {
@@ -130,6 +248,7 @@ async function openOrderDetail(id, currentFilter) {
     try {
       await api(`/admin/api/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ status: fd.get('status'), trackingNo: fd.get('trackingNo') }) });
       statusEl.textContent = '已儲存'; statusEl.className = 'status ok';
+      ordersCache = await api('/admin/api/orders');
       renderOrdersTable(currentFilter);
       setTimeout(() => modal.remove(), 600);
     } catch (err) {
@@ -140,10 +259,17 @@ async function openOrderDetail(id, currentFilter) {
 
 // ---- products ----
 
+let lowStockOnly = false;
+
 async function loadProducts() {
   const box = document.getElementById('view-products');
-  box.innerHTML = `<div class="view-head"><h2>商品管理</h2><button type="button" id="new-product-btn">＋ 新增商品</button></div><div id="products-list"><p class="loading">載入中…</p></div>`;
+  box.innerHTML = `<div class="view-head"><h2>商品管理</h2><div style="display:flex;gap:10px"><button type="button" id="lowstock-toggle" class="chip-toggle${lowStockOnly ? ' active' : ''}">只看低庫存</button><button type="button" id="new-product-btn">＋ 新增商品</button></div></div><div id="products-list"><p class="loading">載入中…</p></div>`;
   document.getElementById('new-product-btn').addEventListener('click', () => openProductForm(null));
+  document.getElementById('lowstock-toggle').addEventListener('click', (e) => {
+    lowStockOnly = !lowStockOnly;
+    e.target.classList.toggle('active', lowStockOnly);
+    renderProductsList();
+  });
   renderProductsList();
 }
 
@@ -152,16 +278,17 @@ async function renderProductsList() {
   try {
     const products = await api('/admin/api/products');
     PRODUCTS_CACHE = products;
-    if (!products.length) { list.innerHTML = '<p class="empty">尚未新增任何商品。</p>'; return; }
-    list.innerHTML = products.map((p) => `
+    const shown = lowStockOnly ? products.filter((p) => p.variants.some((v) => v.stock_qty < 5)) : products;
+    if (!shown.length) { list.innerHTML = `<p class="empty">${lowStockOnly ? '沒有低庫存的商品。' : '尚未新增任何商品。'}</p>`; return; }
+    list.innerHTML = shown.map((p) => `
       <div class="product-card">
         <div class="product-card-head">
           <div><h3>${esc(p.name)}<span class="tag tag-${p.status}">${PRODUCT_STATUS_LABEL[p.status] || p.status}</span></h3><p class="muted">/${esc(p.slug)}${p.category ? ` ・ ${esc(p.category)}` : ''}</p></div>
           <div class="product-card-actions"><button type="button" data-act="edit-product" data-id="${p.id}">編輯</button><button type="button" data-act="delete-product" data-id="${p.id}">刪除</button></div>
         </div>
-        <table class="data-table"><thead><tr><th>SKU</th><th>規格</th><th>價格</th><th>庫存</th><th></th></tr></thead><tbody>
-          ${p.variants.map((v) => `<tr><td>${esc(v.sku)}</td><td>${esc(v.option_label)}</td><td>NT$${v.price.toLocaleString()}</td><td>${v.stock_qty}</td><td><button type="button" data-act="edit-variant" data-id="${v.id}" data-product="${p.id}">編輯</button><button type="button" data-act="delete-variant" data-id="${v.id}" data-product="${p.id}">刪除</button></td></tr>`).join('')}
-          <tr><td colspan="5"><button type="button" data-act="new-variant" data-product="${p.id}">＋ 新增規格</button></td></tr>
+        <table class="data-table"><thead><tr><th>SKU</th><th>規格</th><th>價格</th><th>庫存</th><th>已售出</th><th></th></tr></thead><tbody>
+          ${p.variants.map((v) => `<tr${v.stock_qty < 5 ? ' class="row-warn"' : ''}><td>${esc(v.sku)}</td><td>${esc(v.option_label)}</td><td>NT$${v.price.toLocaleString()}</td><td>${v.stock_qty}</td><td>${v.sold_qty || 0}</td><td><button type="button" data-act="edit-variant" data-id="${v.id}" data-product="${p.id}">編輯</button><button type="button" data-act="delete-variant" data-id="${v.id}" data-product="${p.id}">刪除</button></td></tr>`).join('')}
+          <tr><td colspan="6"><button type="button" data-act="new-variant" data-product="${p.id}">＋ 新增規格</button></td></tr>
         </tbody></table>
       </div>`).join('');
     list.querySelectorAll('[data-act]').forEach((btn) => btn.addEventListener('click', () => handleProductAction(btn)));

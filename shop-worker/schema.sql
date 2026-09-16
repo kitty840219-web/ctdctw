@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
   option_label  TEXT NOT NULL DEFAULT '',
   price         INTEGER NOT NULL,
   stock_qty     INTEGER NOT NULL DEFAULT 0,
+  sold_qty      INTEGER NOT NULL DEFAULT 0,
   sort_order    INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))

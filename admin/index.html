@@ -23,8 +23,10 @@
  <aside class="sidebar">
   <div class="sidebar-brand">CTDC 後台</div>
   <nav>
-   <button type="button" data-view="orders" class="nav-btn active">訂單管理</button>
+   <button type="button" data-view="dashboard" class="nav-btn active">總覽</button>
+   <button type="button" data-view="orders" class="nav-btn">訂單管理</button>
    <button type="button" data-view="products" class="nav-btn" data-role="manager">商品管理</button>
+   <button type="button" data-view="sales" class="nav-btn" data-role="manager">銷售分析</button>
    <button type="button" data-view="users" class="nav-btn" data-role="super_admin">帳號管理</button>
   </nav>
   <div class="sidebar-user">
@@ -33,8 +35,10 @@
   </div>
  </aside>
  <main>
-  <section id="view-orders" class="view"></section>
+  <section id="view-dashboard" class="view"></section>
+  <section id="view-orders" class="view" hidden></section>
   <section id="view-products" class="view" hidden></section>
+  <section id="view-sales" class="view" hidden></section>
   <section id="view-users" class="view" hidden></section>
  </main>
 </div>
