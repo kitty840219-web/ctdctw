@@ -131,10 +131,12 @@ const SALES_RANGES = [
   { key: 'last30', label: '過去 30 天' },
 ];
 let salesOrdersCache = null;
+let salesProductsCache = null;
+let salesRangeKey = 'today';
 
 async function loadSales() {
   const box = document.getElementById('view-sales');
-  box.innerHTML = `<div class="view-head"><h2>銷售分析</h2></div><div class="tab-bar" id="sales-range">${SALES_RANGES.map((r, i) => `<button type="button" data-key="${r.key}" class="${i === 0 ? 'active' : ''}">${r.label}</button>`).join('')}</div><div id="sales-body"><p class="loading">載入中…</p></div>`;
+  box.innerHTML = `<div class="view-head"><h2>銷售分析</h2></div><div class="tab-bar" id="sales-subtabs"><button type="button" data-sub="sales" class="active">銷售</button><button type="button" data-sub="products">商品</button></div><div class="tab-bar" id="sales-range">${SALES_RANGES.map((r, i) => `<button type="button" data-key="${r.key}" class="${i === 0 ? 'active' : ''}">${r.label}</button>`).join('')}</div><div id="sales-body"><p class="loading">載入中…</p></div>`;
   try {
     salesOrdersCache = await api('/admin/api/orders');
   } catch (err) {
@@ -143,9 +145,16 @@ async function loadSales() {
   }
   document.querySelectorAll('#sales-range button').forEach((btn) => btn.addEventListener('click', () => {
     document.querySelectorAll('#sales-range button').forEach((b) => b.classList.toggle('active', b === btn));
-    renderSales(btn.dataset.key);
+    salesRangeKey = btn.dataset.key;
+    renderSales(salesRangeKey);
   }));
-  renderSales('today');
+  document.querySelectorAll('#sales-subtabs button').forEach((btn) => btn.addEventListener('click', () => {
+    document.querySelectorAll('#sales-subtabs button').forEach((b) => b.classList.toggle('active', b === btn));
+    document.getElementById('sales-range').hidden = btn.dataset.sub !== 'sales';
+    if (btn.dataset.sub === 'sales') renderSales(salesRangeKey);
+    else renderSalesProducts();
+  }));
+  renderSales(salesRangeKey);
 }
 
 function renderSales(range) {
@@ -166,6 +175,8 @@ function renderSales(range) {
   const revenue = inRange.reduce((n, o) => n + o.subtotal, 0);
   const count = inRange.length;
   const aov = count ? Math.round(revenue / count) : 0;
+  const buyers = new Set(inRange.map((o) => o.customer_email)).size;
+  const perBuyer = buyers ? Math.round(revenue / buyers) : 0;
   const byDay = {};
   inRange.forEach((o) => { const d = (o.created_at || '').slice(0, 10); byDay[d] = (byDay[d] || 0) + o.subtotal; });
   const dayKeys = Object.keys(byDay).sort();
@@ -175,8 +186,37 @@ function renderSales(range) {
       <div class="stat-card"><span class="stat-label">銷售額</span><strong class="stat-value">NT$${revenue.toLocaleString()}</strong></div>
       <div class="stat-card"><span class="stat-label">訂單數</span><strong class="stat-value">${count}</strong></div>
       <div class="stat-card"><span class="stat-label">平均訂單金額</span><strong class="stat-value">NT$${aov.toLocaleString()}</strong></div>
+      <div class="stat-card"><span class="stat-label">買家數</span><strong class="stat-value">${buyers}</strong></div>
+      <div class="stat-card"><span class="stat-label">客單價</span><strong class="stat-value">NT$${perBuyer.toLocaleString()}</strong></div>
     </div>
     ${dayKeys.length ? `<div class="bar-chart">${dayKeys.map((d) => `<div class="bar-col"><div class="bar" style="height:${Math.max(4, Math.round((byDay[d] / maxVal) * 140))}px" title="${d}：NT$${byDay[d].toLocaleString()}"></div><span class="bar-label">${d.slice(5)}</span></div>`).join('')}</div>` : '<p class="empty">這段期間沒有已成立的訂單。</p>'}
+  `;
+}
+
+async function renderSalesProducts() {
+  const body = document.getElementById('sales-body');
+  body.innerHTML = '<p class="loading">載入中…</p>';
+  if (!salesProductsCache) {
+    try { salesProductsCache = await api('/admin/api/products'); } catch (err) { body.innerHTML = '<p class="empty">載入失敗，請重新整理再試。</p>'; return; }
+  }
+  const rows = salesProductsCache.map((p) => ({
+    name: p.name,
+    sold: p.variants.reduce((n, v) => n + (v.sold_qty || 0), 0),
+    revenue: p.variants.reduce((n, v) => n + (v.sold_qty || 0) * v.price, 0),
+    createdAt: p.created_at,
+  }));
+  const topSelling = [...rows].sort((a, b) => b.sold - a.sold).slice(0, 5);
+  const newest = [...rows].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 5);
+  body.innerHTML = `
+    <h3 class="section-sub">熱銷商品（依累計已售出排序，前 5 名）</h3>
+    ${topSelling.some((r) => r.sold > 0)
+      ? `<table class="data-table"><thead><tr><th>商品</th><th>累計已售出</th><th>累計營收</th></tr></thead><tbody>${topSelling.map((r) => `<tr><td>${esc(r.name)}</td><td>${r.sold}</td><td>NT$${r.revenue.toLocaleString()}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="empty">目前還沒有任何銷售紀錄。</p>'}
+    <h3 class="section-sub">新上架商品</h3>
+    ${newest.length
+      ? `<table class="data-table"><thead><tr><th>商品</th><th>上架時間</th></tr></thead><tbody>${newest.map((r) => `<tr><td>${esc(r.name)}</td><td>${esc(r.createdAt || '')}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="empty">尚未新增任何商品。</p>'}
+    <p class="note-muted">「訪客數」「加入購物車轉換率」這類流量數據，需要另外在商店頁加裝真正的流量追蹤才會有真實數字，目前還沒做，這裡先不顯示假資料。</p>
   `;
 }
 
